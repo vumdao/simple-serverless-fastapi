@@ -1,0 +1,106 @@
+digraph "Diagram" {
+  splines = "ortho";
+  pad = "1.0";
+  nodesep = "0.60";
+  ranksep = "0.75";
+  fontname = "Sans-Serif";
+  fontsize = "15";
+  dpi = "200";
+  rankdir = "BT";
+  compound = "true";
+  fontcolor = "#222222";
+  edge [
+    color = "#D5871488",
+    penwidth = 2,
+    arrowhead = "dot",
+    arrowtail = "dot",
+  ];
+  node [
+    shape = "box",
+    style = "rounded",
+    fixedsize = true,
+    width = 1.7,
+    height = 1.7,
+    labelloc = "c",
+    imagescale = true,
+    fontname = "Sans-Serif",
+    fontsize = 8,
+    margin = 8,
+  ];
+  subgraph "SimpleFastApiServerless" {
+    subgraph "cluster-SubGraph.SimpleFastApiServerless" {
+      graph [
+        label = "SimpleFastApiServerless",
+        labelloc = "b",
+        labeljust = "l",
+        margin = "10",
+        fontsize = "16",
+        penwidth = "2",
+        pencolor = "#888888",
+        style = "filled,rounded",
+        fillcolor = "#e4e4e4",
+      ];
+      "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-lambda-role" [
+        label = " sin simflexcloud d1\nfastapi lambda role",
+        fontsize = 12,
+        image = "/opt/homebrew/lib/node_modules/cdk-dia/icons/aws/Service/Arch_Security-Identity-Compliance/64/Arch_AWS-Identity-and-Access-Management_64@5x.png",
+        imagescale = "true",
+        imagepos = "tc",
+        penwidth = "0",
+        shape = "node",
+        fixedsize = "true",
+        labelloc = "b",
+        width = 1.2,
+        height = 1.682,
+      ];
+      "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-lambda" [
+        label = " sin simflexcloud d1\nfastapi lambda",
+        fontsize = 12,
+        image = "/opt/homebrew/lib/node_modules/cdk-dia/icons/aws/Service/Arch_Compute/64/Arch_AWS-Lambda_64@5x.png",
+        imagescale = "true",
+        imagepos = "tc",
+        penwidth = "0",
+        shape = "node",
+        fixedsize = "true",
+        labelloc = "b",
+        width = 2,
+        height = 2.4819999999999998,
+      ];
+      "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-apigw" [
+        label = " sin simflexcloud d1\nfastapi apigw",
+        fontsize = 12,
+        image = "/opt/homebrew/lib/node_modules/cdk-dia/icons/aws/Service/Arch_Networking-Content/64/Arch_Amazon-API-Gateway_64@5x.png",
+        imagescale = "true",
+        imagepos = "tc",
+        penwidth = "0",
+        shape = "node",
+        fixedsize = "true",
+        labelloc = "b",
+        width = 1.2,
+        height = 1.682,
+      ];
+      "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-usage-plan" [
+        label = " sin simflexcloud d1\nfastapi usage plan",
+        fontsize = 12,
+        image = "/opt/homebrew/lib/node_modules/cdk-dia/icons/aws/Service/Arch_Networking-Content/64/Arch_Amazon-API-Gateway_64@5x.png",
+        imagescale = "true",
+        imagepos = "tc",
+        penwidth = "0",
+        shape = "node",
+        fixedsize = "true",
+        labelloc = "b",
+        width = 1.2,
+        height = 1.682,
+      ];
+    }
+  }
+  "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-lambda" -> "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-lambda-role" [
+    dir = "both",
+  ];
+  "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-apigw" -> "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-lambda" [
+    dir = "both",
+  ];
+  "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-usage-plan" -> "SimpleFastApiServerless/sin-simflexcloud-d1-fastapi-apigw" [
+    dir = "both",
+  ];
+}
