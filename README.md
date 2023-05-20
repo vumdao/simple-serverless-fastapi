@@ -115,10 +115,6 @@
   {"message":"We got question: how are you"}
   ```
 
-- The deploy stage creates codedeploy deployment ID to perform deployment process and handle Traffic shifting progress strategy with rule `LINEAR_10PERCENT_EVERY_1MINUTES` (CodeDeploy predefined deployment configuration that shifts 10 percent of traffic every minute until all traffic is shifted)
-
-  <img src=images/deployment-id.png width=700>
-
 ## 🚀 **Conclusion** <a name="Conclusion"></a>
 - We created a FastAPI application using AWS Serverless. User must provide API key to query reqest and the API key is associated with the usage plan where we can specify who can access the deployed API stages and methods, optionally sets the target request rate to start throttling requests.
 
