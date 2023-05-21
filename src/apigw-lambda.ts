@@ -7,7 +7,7 @@ import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { join } from "path";
-import { LambdaIntegration, MethodOptions, Model, RestApi, UsagePlan } from "aws-cdk-lib/aws-apigateway";
+import { Integration, IntegrationType, MethodOptions, Model, RestApi, UsagePlan } from "aws-cdk-lib/aws-apigateway";
 import { Certificate, CertificateValidation } from "aws-cdk-lib/aws-certificatemanager";
 import { HostedZone, RecordSet, RecordTarget, RecordType } from "aws-cdk-lib/aws-route53";
 import { ApiGatewayDomain } from "aws-cdk-lib/aws-route53-targets";
@@ -16,7 +16,7 @@ export class SimpleFastApiServerless extends Stack {
   constructor(scope: Construct, id: string, reg: EnvironmentConfig, props?: StackProps) {
     super(scope, id, props);
 
-    const prefix =`${reg.pattern}-${PROJECT_OWNER}-${reg.stage}-fastapi`;
+    const prefix = `${reg.pattern}-${PROJECT_OWNER}-${reg.stage}-fastapi`;
 
     const lambdaRole = new Role(this, `${prefix}-lambda-role`, {
       roleName: prefix,
@@ -24,7 +24,7 @@ export class SimpleFastApiServerless extends Stack {
       managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')]
     });
 
-    const lambdaFunc = new PythonFunction(this, `${prefix}-lambda`, {
+    new PythonFunction(this, `${prefix}-lambda`, {
       functionName: prefix,
       role: lambdaRole,
       runtime: Runtime.PYTHON_3_9,
@@ -54,9 +54,9 @@ export class SimpleFastApiServerless extends Stack {
     /**
      * APIGW integration
      */
-    const lambdaInt = new LambdaIntegration(lambdaFunc, {
-      integrationResponses: [{ statusCode: '200' }]
-    });
+    //const lambdaInt = new LambdaIntegration(lambdaFunc, {
+    //  integrationResponses: [{ statusCode: '200' }]
+    //});
 
     /**
      * Method option
@@ -74,7 +74,8 @@ export class SimpleFastApiServerless extends Stack {
             },
           },
         ],
-        apiKeyRequired: apiKeyRequired || true,
+        apiKeyRequired: (apiKeyRequired === undefined) ? true : apiKeyRequired,
+        requestParameters: { "method.request.path.proxy": true },
       }
     }
 
@@ -82,30 +83,62 @@ export class SimpleFastApiServerless extends Stack {
      * Root path /
      * This proxy route path serves API Docs so it must not require API key
      */
-    apigw.root.addProxy({
-      anyMethod: true,
-      defaultIntegration: lambdaInt,
-      defaultMethodOptions: methodOptions(false)
-    });
+    //apigw.root.addProxy({
+    //  anyMethod: true,
+    //  defaultIntegration: lambdaInt,
+    //  defaultMethodOptions: methodOptions(false)
+    //});
 
     /**
      * /api/v1/*
      */
-    const apiSrc = apigw.root.addResource('api');
-    const apiV1Src = apiSrc.addResource('v1');
-    apiV1Src.addProxy({
-      anyMethod: true,
-      defaultIntegration: lambdaInt,
-      defaultMethodOptions: methodOptions(),
-    });
+    //const apiSrc = apigw.root.addResource('api');
+    //const apiV1Src = apiSrc.addResource('v1');
+    //apiV1Src.addProxy({
+    //  anyMethod: true,
+    //  defaultIntegration: lambdaInt,
+    //  defaultMethodOptions: methodOptions(),
+    //});
 
     /**
      * /chat_gpt/
      */
-    const chatGptSrc = apigw.root.addResource('chat_gpt');
-    chatGptSrc.addProxy({
+    //const chatGptSrc = apigw.root.addResource('chat_gpt');
+    //chatGptSrc.addProxy({
+    //  anyMethod: true,
+    //  defaultIntegration: lambdaInt,
+    //  defaultMethodOptions: methodOptions(),
+    //});
+
+    /**
+     * HTTP integration
+     */
+    const httpInt: any = function (uriPath: string) {
+      return new Integration({
+        type: IntegrationType.HTTP_PROXY,
+        integrationHttpMethod: "ANY",
+        uri: `http://18.169.10.197:8000/${uriPath}`,
+        options: {
+          integrationResponses: [{ statusCode: "200" }],
+          requestParameters: {
+            "integration.request.path.proxy": "method.request.path.proxy",
+          },
+          cacheKeyParameters: ["method.request.path.proxy"],
+        },
+      })
+    };
+
+    apigw.root.addProxy({
       anyMethod: true,
-      defaultIntegration: lambdaInt,
+      defaultIntegration: httpInt('{proxy}'),
+      defaultMethodOptions: methodOptions(false),
+    });
+
+    const apiSrc = apigw.root.addResource('api');
+    const apiV1Src = apiSrc.addResource('v1');
+    apiV1Src.addProxy({
+      anyMethod: true,
+      defaultIntegration: httpInt('api/v1/{proxy}'),
       defaultMethodOptions: methodOptions(),
     });
 
