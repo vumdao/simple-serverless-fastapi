@@ -7,7 +7,7 @@ import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { join } from "path";
-import { LambdaIntegration, MethodOptions, Model, RestApi, UsagePlan } from "aws-cdk-lib/aws-apigateway";
+import { HttpIntegration, LambdaIntegration, MethodOptions, Model, RestApi, UsagePlan } from "aws-cdk-lib/aws-apigateway";
 import { Certificate, CertificateValidation } from "aws-cdk-lib/aws-certificatemanager";
 import { HostedZone, RecordSet, RecordTarget, RecordType } from "aws-cdk-lib/aws-route53";
 import { ApiGatewayDomain } from "aws-cdk-lib/aws-route53-targets";
@@ -16,7 +16,7 @@ export class SimpleFastApiServerless extends Stack {
   constructor(scope: Construct, id: string, reg: EnvironmentConfig, props?: StackProps) {
     super(scope, id, props);
 
-    const prefix =`${reg.pattern}-${PROJECT_OWNER}-${reg.stage}-fastapi`;
+    const prefix = `${reg.pattern}-${PROJECT_OWNER}-${reg.stage}-fastapi`;
 
     const lambdaRole = new Role(this, `${prefix}-lambda-role`, {
       roleName: prefix,
@@ -59,7 +59,7 @@ export class SimpleFastApiServerless extends Stack {
     });
 
     /**
-     * Method option
+     * Method option function
      */
     const methodOptions = function (
       apiKeyRequired?: boolean
@@ -74,7 +74,8 @@ export class SimpleFastApiServerless extends Stack {
             },
           },
         ],
-        apiKeyRequired: apiKeyRequired || true,
+        apiKeyRequired: (apiKeyRequired === undefined) ? true : apiKeyRequired,
+        requestParameters: { "method.request.path.proxy": true },
       }
     }
 
@@ -89,11 +90,11 @@ export class SimpleFastApiServerless extends Stack {
     });
 
     /**
-     * /api/v1/*
+     * /api/v2/*
      */
     const apiSrc = apigw.root.addResource('api');
-    const apiV1Src = apiSrc.addResource('v1');
-    apiV1Src.addProxy({
+    const apiV2Src = apiSrc.addResource('v2');
+    apiV2Src.addProxy({
       anyMethod: true,
       defaultIntegration: lambdaInt,
       defaultMethodOptions: methodOptions(),
@@ -106,6 +107,30 @@ export class SimpleFastApiServerless extends Stack {
     chatGptSrc.addProxy({
       anyMethod: true,
       defaultIntegration: lambdaInt,
+      defaultMethodOptions: methodOptions(),
+    });
+
+    /**
+     * HTTP integration function
+     */
+    const httpInt: any = function (uriPath: string) {
+      return new HttpIntegration(`http://58.186.46.227:8000/${uriPath}`, {
+        proxy: true,
+        httpMethod: 'ANY',
+        options: {
+          integrationResponses: [{ statusCode: "200" }],
+          requestParameters: {
+            "integration.request.path.proxy": "method.request.path.proxy",
+          },
+          cacheKeyParameters: ["method.request.path.proxy"],
+        },
+      })
+    };
+
+    const apiV1Src = apiSrc.addResource('v1');
+    apiV1Src.addProxy({
+      anyMethod: true,
+      defaultIntegration: httpInt('api/v1/{proxy}'),
       defaultMethodOptions: methodOptions(),
     });
 
