@@ -7,7 +7,7 @@ import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { join } from "path";
-import { Integration, IntegrationType, MethodOptions, Model, RestApi, UsagePlan } from "aws-cdk-lib/aws-apigateway";
+import { HttpIntegration, LambdaIntegration, MethodOptions, Model, RestApi, UsagePlan } from "aws-cdk-lib/aws-apigateway";
 import { Certificate, CertificateValidation } from "aws-cdk-lib/aws-certificatemanager";
 import { HostedZone, RecordSet, RecordTarget, RecordType } from "aws-cdk-lib/aws-route53";
 import { ApiGatewayDomain } from "aws-cdk-lib/aws-route53-targets";
@@ -24,7 +24,7 @@ export class SimpleFastApiServerless extends Stack {
       managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')]
     });
 
-    new PythonFunction(this, `${prefix}-lambda`, {
+    const lambdaFunc = new PythonFunction(this, `${prefix}-lambda`, {
       functionName: prefix,
       role: lambdaRole,
       runtime: Runtime.PYTHON_3_9,
@@ -54,12 +54,12 @@ export class SimpleFastApiServerless extends Stack {
     /**
      * APIGW integration
      */
-    //const lambdaInt = new LambdaIntegration(lambdaFunc, {
-    //  integrationResponses: [{ statusCode: '200' }]
-    //});
+    const lambdaInt = new LambdaIntegration(lambdaFunc, {
+      integrationResponses: [{ statusCode: '200' }]
+    });
 
     /**
-     * Method option
+     * Method option function
      */
     const methodOptions = function (
       apiKeyRequired?: boolean
@@ -83,41 +83,40 @@ export class SimpleFastApiServerless extends Stack {
      * Root path /
      * This proxy route path serves API Docs so it must not require API key
      */
-    //apigw.root.addProxy({
-    //  anyMethod: true,
-    //  defaultIntegration: lambdaInt,
-    //  defaultMethodOptions: methodOptions(false)
-    //});
+    apigw.root.addProxy({
+      anyMethod: true,
+      defaultIntegration: lambdaInt,
+      defaultMethodOptions: methodOptions(false)
+    });
 
     /**
-     * /api/v1/*
+     * /api/v2/*
      */
-    //const apiSrc = apigw.root.addResource('api');
-    //const apiV1Src = apiSrc.addResource('v1');
-    //apiV1Src.addProxy({
-    //  anyMethod: true,
-    //  defaultIntegration: lambdaInt,
-    //  defaultMethodOptions: methodOptions(),
-    //});
+    const apiSrc = apigw.root.addResource('api');
+    const apiV2Src = apiSrc.addResource('v2');
+    apiV2Src.addProxy({
+      anyMethod: true,
+      defaultIntegration: lambdaInt,
+      defaultMethodOptions: methodOptions(),
+    });
 
     /**
      * /chat_gpt/
      */
-    //const chatGptSrc = apigw.root.addResource('chat_gpt');
-    //chatGptSrc.addProxy({
-    //  anyMethod: true,
-    //  defaultIntegration: lambdaInt,
-    //  defaultMethodOptions: methodOptions(),
-    //});
+    const chatGptSrc = apigw.root.addResource('chat_gpt');
+    chatGptSrc.addProxy({
+      anyMethod: true,
+      defaultIntegration: lambdaInt,
+      defaultMethodOptions: methodOptions(),
+    });
 
     /**
-     * HTTP integration
+     * HTTP integration function
      */
     const httpInt: any = function (uriPath: string) {
-      return new Integration({
-        type: IntegrationType.HTTP_PROXY,
-        integrationHttpMethod: "ANY",
-        uri: `http://18.169.10.197:8000/${uriPath}`,
+      return new HttpIntegration(`http://58.186.46.227:8000/${uriPath}`, {
+        proxy: true,
+        httpMethod: 'ANY',
         options: {
           integrationResponses: [{ statusCode: "200" }],
           requestParameters: {
@@ -128,13 +127,6 @@ export class SimpleFastApiServerless extends Stack {
       })
     };
 
-    apigw.root.addProxy({
-      anyMethod: true,
-      defaultIntegration: httpInt('{proxy}'),
-      defaultMethodOptions: methodOptions(false),
-    });
-
-    const apiSrc = apigw.root.addResource('api');
     const apiV1Src = apiSrc.addResource('v1');
     apiV1Src.addProxy({
       anyMethod: true,
